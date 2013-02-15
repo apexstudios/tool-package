@@ -19,3 +19,15 @@ Intended for internal use only
 ==============================
 
 We do not take care for compatibility on external systems
+
+Install
+=======
+
+Follow these instructions:
+
+ - To do the initial set up, run the `install.bat`
+   - It will set up environment variables pointing to `Arcanist/` and `PHP/`
+   - If I have managed it in time, it will also ask you to do the Arcanist set up (installing the
+      certificate)
+ - To install `TortsoiseSVN`, run the installer located in the `Installers/TortoiseSVN/` directory appropriate
+   for your operating system architecture (32/64bit)
