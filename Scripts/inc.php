@@ -77,6 +77,7 @@ function selectScreen()
     Cli::output("3. Install TortoiseSVN");
     Cli::output("4. Install TortoiseGit and Git for Windows");
     Cli::output("5. Install Notepad++ 6.3");
+    Cli::output("6. Configure Arcanist to use Notepad++");
     Cli::output("0. Exit");
     println();
     Cli::notice("You can press Ctrl+C anytime to exit");
@@ -135,7 +136,9 @@ function selectScreen()
             println();
             Cli::notice("Installing Notepad++ 6.3");
             exec("start " . ROOT . "Installers\Notepad++\npp.6.3.Installer.exe");
-            
+            break;
+        case 6:
+            installArcEditor();
             break;
         default:
             Cli::output("Invalid input!");
@@ -158,6 +161,21 @@ function php($cmd)
 function arcInstall()
 {
     echo exec("start arc install-certificate");
+}
+
+function installArcEditor()
+{
+    $cmd = "arc set-config editor \"\\\"C:\\Program Files (x86)\\Notepad++\\notepad++.exe\\\" -multiInst -nosession\"";
+
+    Cli::output("This will configure Arcanist to use Notepad++");
+    println();
+    Cli::notice("I'm assuming the default install path in C:\\Program Files (x86)\\Notepad++\\notepad++.exe");
+    println();
+    Cli::output("If this is not the case, stop right here. I'll add support for custom paths in the future.");
+    Cli::output("I can't be bothered to do it right now.");
+    
+    println();
+    passthru($cmd);
 }
 
 function installCertificate()
