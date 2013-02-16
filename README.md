@@ -72,4 +72,4 @@ Install
 How to use
 ==========
 
-I will add guides into the `Guides/` folder soon. Wait for that day.
+I will add guides into the [`Guides/`](https://github.com/apexstudios/tool-package/tree/master/Guides) folder soon. Wait for that day.
