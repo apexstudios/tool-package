@@ -70,6 +70,8 @@ You have three options here.
 
  1. Use `arc patch --patch path/to/file.patch` - see _Method 1_ - it will not work with SVN for some reason...
  2. Use `svn patch path/to/file.path` - it will not understand the `git` format
- 3. Use TortoiseSVN to apply patches with super-high precision
+ 3. Use TortoiseSVN to apply patches with super-high precision - you should love this method since it
+    1. Understands the `git` format
+    2. You can select which files to change and which not
 
  ![TortoiseSVN Power](img/tortoisesvn_patch.png)
