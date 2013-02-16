@@ -76,6 +76,7 @@ function selectScreen()
     Cli::output("2. Install certificate for Arcanist (requires 1.)");
     Cli::output("3. Install TortoiseSVN");
     Cli::output("4. Install TortoiseGit and Git for Windows");
+    Cli::output("5. Install Notepad++ 6.3");
     Cli::output("0. Exit");
     println();
     Cli::notice("You can press Ctrl+C anytime to exit");
@@ -128,6 +129,13 @@ function selectScreen()
 
             Cli::notice("Installing Git for Windows");
             exec("start " . ROOT . "Installers\GitForWindows\Git-1.8.1.2-preview20130201.exe");
+            break;
+        case 5:
+            Cli::notice("I recommend installing into the default directory.");
+            println();
+            Cli::notice("Installing Notepad++ 6.3");
+            exec("start " . ROOT . "Installers\Notepad++\npp.6.3.Installer.exe");
+            
             break;
         default:
             Cli::output("Invalid input!");
