@@ -35,7 +35,7 @@ Method 2: Applying per patch
 You should always keep this method in mind. It _will_ work. Your best fallback option, and probably your only one.
 
 Retrieving the patch
-~~~~~~~~~~~~~~~~~~~~
+--------------------
 
 First, you can retrieve a patch file from a _Differential Revision_. Either you can retrieve directly the latest changes from a revision, or a specific change by speciyfing a diff (see _Method 1_).
 
@@ -64,7 +64,7 @@ arc export --diff 218 --git > diff_id_218.patch
 ```
 
 Applying the patch
-~~~~~~~~~~~~~~~~~~
+------------------
 
 You have three options here.
 
