@@ -1,0 +1,3 @@
+```code```
+~~~~~~~~~~
+<div class="remarkup-code-block" data-code-lang="php"><pre class="remarkup-code"><span class="no">code</span></pre></div>
