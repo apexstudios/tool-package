@@ -99,23 +99,13 @@ function selectScreen()
 
             if ($checkEnv) {
                 println();
-                Cli::notice("Environment already set up - no need to change");
+                Cli::success("Environment already set up - no need to change");
             } else {
                 addToPathEnv("PHP");
-                addToPathEnv("Arcanist\bin");
+                addToPathEnv("arc\arcanist\bin");
 
                 Cli::notice("Please restart the install script (that is, close this window completely) and re-run this step to see if it worked.");
                 Cli::output("You know that it failed when the same errors happen.");
-
-                /* Checking again is non-sense
-                 * // Check up again
-                $checkEnv = checkEnvVars();
-
-                if ($checkEnv) {
-                    Cli::success("Set up environment");
-                } else {
-                    Cli::error("Could not set up environment");
-                }*/
             }
             break;
         case 2:
