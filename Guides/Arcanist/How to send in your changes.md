@@ -24,8 +24,7 @@ Else it is very similar to above. Except that every change is in the commits, no
 If you're SVN
 -------------
 
-Creating a new Revision
-~~~~~~~~~~~~~~~~~~~~~~~
+### Creating a new Revision ###
 
 First, make sure that you do not have commited the changes (else Code Review would be pointless). Use TortoiseSVN's Commit tool to review the changes. As how they appear in there they will be sent in for review in a _Differential Revision_. *Do not commit.*
 
@@ -45,8 +44,7 @@ You will get a summary of the new revision, including the revision id, a link to
 
 Wait for ~~bashing~~ praise comments and approvals.
 
-Updating a Revision
-~~~~~~~~~~~~~~~~~~~
+### Updating a Revision ###
 
 I assume that you have sent in a _Differential Revision_ and want to continue working on it. Adjusting shield strengths because someone complained, adding some new stuff to the revision, etc.
 
