@@ -80,4 +80,4 @@ You have three options here.
 Try it out, too!
 ================
 
-There are already several _Differential Revisions_ on _Phabricator_ for code changes affecting the CaW code base. D53 (dummy template for T85, Upgradeable Ships) and D102 (Removing unnecessary unit spawners) come to my mind, although there are a few more. Try it out, fetch the changes from _Phabricator_!
+There are already several _Differential Revisions_ on _Phabricator_ for code changes affecting the CaW code base. D53 (dummy template for T85, Upgradeable Ships), D102 (Removing unnecessary unit spawners) and D104 (Fixing T9) come to my mind, although there are a few more. Try it out, fetch the changes from _Phabricator_!
