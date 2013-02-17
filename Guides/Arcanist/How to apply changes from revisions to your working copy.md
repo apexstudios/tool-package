@@ -73,5 +73,11 @@ You have three options here.
  3. Use TortoiseSVN to apply patches with super-high precision - you should love this method since it
     1. Understands the `git` format
     2. You can select which files to change and which not
+    3. You can easily review the changes before applying them
 
  ![TortoiseSVN Power](img/tortoisesvn_patch.png)
+
+Try it out, too!
+================
+
+There are already several _Differential Revisions_ on _Phabricator_ for code changes affecting the CaW code base. D53 (dummy template for T85, Upgradeable Ships) and D102 (Removing unnecessary unit spawners) come to my mind, although there are a few more. Try it out, fetch the changes from _Phabricator_!
