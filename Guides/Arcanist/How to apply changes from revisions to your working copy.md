@@ -34,6 +34,8 @@ Method 2: Applying per patch
 
 You should always keep this method in mind. It _will_ work. Your best fallback option, and probably your only one.
 
+NOTE: This will probably only work for non-binary files. Textures, models, particles, maps, music and the `MasterTextFile.dat` get to stay out. I do not give any guarantees that these will work on the enumerated files.
+
 Retrieving the patch
 --------------------
 
@@ -49,7 +51,7 @@ To get a patch for a revision (here `D123`) in the `git` format and save it in `
 arc export --revision D123 --git > revD123.patch
 ```
 
-Now, only using `arc export --revision D123 --git` would be enough. But this will simply output the patch in the command line directly and is therefore unuseable. We want to save it in a file instead. The `> [filename]` tells the command line to "catch" the output and save in in a file.
+Now, only using `arc export --revision D123 --git` would be enough. But this will simply output the patch in the command line directly and is therefore unuseable. We want to save it in a file instead. The `> [filename]` tells the command line to "catch" the output and save in a file.
 
 The same command for a `unified` patch:
 
@@ -80,4 +82,4 @@ You have three options here.
 Try it out, too!
 ================
 
-There are already several _Differential Revisions_ on _Phabricator_ for code changes affecting the CaW code base. D53 (dummy template for T85, Upgradeable Ships), D102 (Removing unnecessary unit spawners) and D104 (Fixing T9) come to my mind, although there are a few more. Try it out, fetch the changes from _Phabricator_!
+There are already several _Differential Revisions_ on _Phabricator_ for code changes affecting the CaW code base. D53 (dummy template for T85, Upgradeable Ships), D102 (Removing unnecessary unit spawners) and D104 (Fixing shipyards) come to my mind, although there are a few more. Try it out, fetch the changes from _Phabricator_!
