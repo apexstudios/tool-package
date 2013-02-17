@@ -39,13 +39,6 @@ class Cli
 
     public static function output($text)
     {
-        /*$array = preg_split("//", $text);
-
-        foreach ($array as $char) {
-            print $char;
-            usleep(10);
-        }*
-         */
         usleep(100);
         print $text;
         print PHP_EOL;
