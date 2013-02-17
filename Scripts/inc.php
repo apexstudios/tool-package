@@ -70,7 +70,6 @@ function checkEnvVars()
 function selectScreen()
 {
     println();
-    println();
 
     Cli::output("1. Set up environment variables");
     Cli::output("2. Install certificate for Arcanist (requires 1.)");
@@ -93,6 +92,8 @@ function selectScreen()
         case 1:
             Cli::notice("If plenty of error messages pop up, don't worry. That's just me testing whether it works or not. The error messages penetrate my error blocking barreers...");
             Cli::output("Press a button to continue");
+            println();
+            Cli::notice("Admin rights may be necessary - Idk");
             dontMove();
 
             ob_start();
@@ -101,7 +102,7 @@ function selectScreen()
 
             if ($checkEnv) {
                 println();
-                Cli::success("Environment already set up - no need to change");
+                Cli::success("Environment already set up - can't be bothered to change");
             } else {
                 addToPathEnv("PHP");
                 addToPathEnv("arc\arcanist\bin");
@@ -173,7 +174,8 @@ function installArcEditor()
     println();
     Cli::output("If this is not the case, stop right here. I'll add support for custom paths in the future.");
     Cli::output("I can't be bothered to do it right now.");
-    
+    dontMove();
+
     println();
     passthru($cmd);
 }
