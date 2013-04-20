@@ -6,34 +6,31 @@
  * forwards it to registered listeners. This is essentially a more powerful
  * version of ##error_log()##.
  *
- * NOTE: You must call ##PhutilErrorHandler::initialize()## before this will do
- * anything.
- *
  * @param wild Any value you want printed to the error log or other registered
  *             logs/consoles.
+ * @param ...  Other values to be logged.
  * @return wild Passed $value.
  * @group error
  */
-function phlog($value) {
-
-  if (!PhutilErrorHandler::hasInitialized()) {
-    throw new Exception(
-      "Call to phlog() before PhutilErrorHandler::initialize()!");
-  }
+function phlog($value/* , ... */) {
 
   // Get the caller information
   $trace = debug_backtrace();
-  $file = $trace[0]['file'];
-  $line = $trace[0]['line'];
+  $metadata = array(
+    'file' => $trace[0]['file'],
+    'line' => $trace[0]['line'],
+    'trace' => $trace,
+  );
 
-  PhutilErrorHandler::dispatchErrorMessage(
-    $value instanceof Exception
-      ? PhutilErrorHandler::EXCEPTION
-      : PhutilErrorHandler::PHLOG,
-    $value,
-    array('file'  => $file,
-          'line'  => $line,
-          'trace' => $trace));
+  foreach (func_get_args() as $event) {
+    PhutilErrorHandler::dispatchErrorMessage(
+      $event instanceof Exception
+        ? PhutilErrorHandler::EXCEPTION
+        : PhutilErrorHandler::PHLOG,
+      $event,
+      $metadata);
+  }
+
   return $value;
 }
 

@@ -48,12 +48,26 @@ final class ArcanistSettings {
           'engine is specified by the current project.',
         'example' => '"ExampleUnitTestEngine"',
       ),
+      'arc.feature.start.default' => array(
+        'type' => 'string',
+        'help' =>
+          'The name of the default branch to create the new feature branch '.
+          'off of.',
+        'example' => '"develop"',
+      ),
       'arc.land.onto.default' => array(
         'type' => 'string',
         'help' =>
           'The name of the default branch to land changes onto when '.
           '`arc land` is run.',
         'example' => '"develop"',
+      ),
+      'arc.land.update.default' => array(
+        'type' => 'string',
+        'help' =>
+          'The default strategy to use when arc land updates the feature '.
+          'branch. Supports \'rebase\' and \'merge\' strategies.',
+        'example' => '"rebase"',
       ),
       'history.immutable' => array(
         'type' => 'bool',
@@ -93,6 +107,16 @@ final class ArcanistSettings {
         'help' =>
           "Password to use for basic auth over http transports",
         'example' => '"bobhasasecret"',
+      ),
+      'arc.autostash' => array(
+        'type' => 'bool',
+        'help' =>
+          'Whether arc should permit the automatic stashing of changes in '.
+          'the working directory when requiring a clean working copy.  '.
+          'This option should only be used when users understand how '.
+          'to restore their working directory from the local stash if '.
+          'an Arcanist operation causes an unrecoverable error.',
+        'example' => 'false',
       ),
     );
   }

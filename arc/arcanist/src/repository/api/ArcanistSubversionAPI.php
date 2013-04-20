@@ -151,6 +151,8 @@ final class ArcanistSubversionAPI extends ArcanistRepositoryAPI {
 
   private function parseSVNStatus($item) {
     switch ($item) {
+      case 'none':
+        // We can get 'none' for property changes on a directory.
       case 'normal':
         return 0;
       case 'external':
@@ -193,6 +195,7 @@ final class ArcanistSubversionAPI extends ArcanistRepositoryAPI {
         'delete -- %Ls',
         array_diff($paths, $add));
     }
+    $this->svnStatus = null;
   }
 
   public function getSVNProperty($path, $property) {
@@ -380,10 +383,19 @@ final class ArcanistSubversionAPI extends ArcanistRepositoryAPI {
     $matches = null;
     if (preg_match('/\.(gif|png|jpe?g|swf|pdf|ico)$/i', $path, $matches)) {
       $mime = $this->getSVNProperty($path, 'svn:mime-type');
+      if ($status & ArcanistRepositoryAPI::FLAG_DELETED) {
+        return <<<EODIFF
+Index: {$path}
+===================================================================
+Cannot display: file marked as a binary type.
+svn:mime-type = application/octet-stream
+
+EODIFF;
+      }
       if ($mime != 'application/octet-stream') {
         execx(
           'svn propset svn:mime-type application/octet-stream %s',
-          $this->getPath($path));
+          self::escapeFileNameForSVN($this->getPath($path)));
       }
     }
 
@@ -644,18 +656,25 @@ EODIFF;
   }
 
   public static function escapeFileNamesForSVN(array $files) {
+    foreach ($files as $k => $file) {
+      $files[$k] = self::escapeFileNameForSVN($file);
+    }
+    return $files;
+  }
+
+  public static function escapeFileNameForSVN($file) {
     // SVN interprets "x@1" as meaning "file x at revision 1", which is not
     // intended for files named "sprite@2x.png" or similar. For files with an
     // "@" in their names, escape them by adding "@" at the end, which SVN
     // interprets as "at the working copy revision". There is a special case
     // where ".@" means "fail with an error" instead of ". at the working copy
     // revision", so avoid escaping "." into ".@".
-    foreach ($files as $k => $file) {
-      if (strpos($file, '@') !== false) {
-        $files[$k] = $file.'@';
-      }
+
+    if (strpos($file, '@') !== false) {
+      $file = $file.'@';
     }
-    return $files;
+
+    return $file;
   }
 
 }

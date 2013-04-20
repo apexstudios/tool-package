@@ -13,6 +13,7 @@ final class ArcanistDiffParser {
   protected $lineSaved;
   protected $isGit;
   protected $isMercurial;
+  protected $isRCS;
   protected $detectBinaryFiles = false;
   protected $tryEncoding;
   protected $rawDiff;
@@ -205,6 +206,8 @@ final class ArcanistDiffParser {
         // This is a git diff, probably from "git show" or "git diff".
         // Note that the filenames may appear quoted.
         '(?P<type>diff --git) (?P<oldnew>.*)',
+        // RCS Diff
+        '(?P<type>rcsdiff -u) (?P<oldnew>.*)',
         // This is a unified diff, probably from "diff -u" or synthetic diffing.
         '(?P<type>---) (?P<old>.+)\s+\d{4}-\d{2}-\d{2}.*',
         '(?P<binary>Binary) files '.
@@ -303,6 +306,10 @@ final class ArcanistDiffParser {
           $this->setIsMercurial(true);
           $this->parseIndexHunk($change);
           break;
+        case 'rcsdiff -u':
+          $this->isRCS = true;
+          $this->parseIndexHunk($change);
+          break;
         default:
           $this->didFailParse("Unknown diff type.");
           break;
@@ -365,7 +372,7 @@ final class ArcanistDiffParser {
    * (or any other parser) with a carefully constructed property change.
    */
   protected function parsePropertyHunk(ArcanistDiffChange $change) {
-    $line = $this->getLine();
+    $line = $this->getLineTrimmed();
     if (!preg_match('/^_+$/', $line)) {
       $this->didFailParse("Expected '______________________'.");
     }
@@ -377,10 +384,17 @@ final class ArcanistDiffParser {
         break;
       }
 
+      // NOTE: Before 1.5, SVN uses "Name". At 1.5 and later, SVN uses
+      // "Modified", "Added" and "Deleted".
+
       $matches = null;
-      $ok = preg_match('/^(Modified|Added|Deleted): (.*)$/', $line, $matches);
+      $ok = preg_match(
+        '/^(Name|Modified|Added|Deleted): (.*)$/',
+        $line,
+        $matches);
       if (!$ok) {
-        $this->didFailParse("Expected 'Added', 'Deleted', or 'Modified'.");
+        $this->didFailParse(
+          "Expected 'Name', 'Added', 'Deleted', or 'Modified'.");
       }
 
       $op = $matches[1];
@@ -727,8 +741,19 @@ final class ArcanistDiffParser {
       }
     }
 
+    if ($this->isRCS) {
+      // Skip the RCS headers.
+      $this->nextLine();
+      $this->nextLine();
+      $this->nextLine();
+    }
+
     $old_file = $this->parseHunkTarget();
     $new_file = $this->parseHunkTarget();
+
+    if ($this->isRCS) {
+      $change->setCurrentPath($new_file);
+    }
 
     $change->setOldPath($old_file);
 
@@ -768,12 +793,15 @@ final class ArcanistDiffParser {
       // Something like "Fri Aug 26 01:20:50 2005 -0700", don't bother trying
       // to parse it.
       $remainder = '\t.*';
+    } else if ($this->isRCS) {
+      $remainder = '\s.*';
     }
 
     $ok = preg_match(
       '@^[-+]{3} (?:[ab]/)?(?P<path>.*?)'.$remainder.'$@',
       $line,
       $matches);
+
     if (!$ok) {
       $this->didFailParse(
         "Expected hunk target '+++ path/to/file.ext (revision N)'.");
@@ -1135,6 +1163,8 @@ final class ArcanistDiffParser {
       return;
     }
 
+    $imagechanges = array();
+
     $changes = $this->changes;
     foreach ($changes as $change) {
       $path = $change->getCurrentPath();
@@ -1176,8 +1206,22 @@ final class ArcanistDiffParser {
         continue;
       }
 
-      $change->setOriginalFileData($repository_api->getOriginalFileData($path));
-      $change->setCurrentFileData($repository_api->getCurrentFileData($path));
+      $imagechanges[$path] = $change;
+    }
+
+    // Fetch the actual file contents in batches so repositories
+    // that have slow random file accesses (i.e. mercurial) can
+    // optimize the retrieval.
+    $paths = array_keys($imagechanges);
+
+    $filedata = $repository_api->getBulkOriginalFileData($paths);
+    foreach ($filedata as $path => $data) {
+      $imagechanges[$path]->setOriginalFileData($data);
+    }
+
+    $filedata = $repository_api->getBulkCurrentFileData($paths);
+    foreach ($filedata as $path => $data) {
+      $imagechanges[$path]->setCurrentFileData($data);
     }
 
     $this->changes = $changes;

@@ -23,10 +23,10 @@ EOTEXT
           Supports: git, hg, svn
           Close a revision which has been committed (svn) or pushed (git, hg).
           You should not normally need to do this: arc commit (svn), arc amend
-          (git), arc land (git), or repository tracking on the master remote
-          repository should do it for you. However, if these mechanisms have
-          failed for some reason you can use this command to manually change a
-          revision status from "Accepted" to "Closed".
+          (git, hg), arc land (git, hg), or repository tracking on the master
+          remote repository should do it for you. However, if these mechanisms
+          have failed for some reason you can use this command to manually
+          change a revision status from "Accepted" to "Closed".
 EOTEXT
       );
   }
@@ -85,8 +85,7 @@ EOTEXT
         'differential.getrevision',
         array(
           'revision_id' => $revision_id,
-        )
-      );
+        ));
     } catch (Exception $ex) {
       if (!$is_finalize) {
         throw new ArcanistUsageException(

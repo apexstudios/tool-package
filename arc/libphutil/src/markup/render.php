@@ -36,6 +36,31 @@ function phutil_tag($tag, array $attributes = array(), $content = null) {
     }
   }
 
+  // For tags which can't self-close, treat null as the empty string -- for
+  // example, always render `<div></div>`, never `<div />`.
+  static $self_closing_tags = array(
+    'area'    => true,
+    'base'    => true,
+    'br'      => true,
+    'col'     => true,
+    'command' => true,
+    'embed'   => true,
+    'hr'      => true,
+    'img'     => true,
+    'input'   => true,
+    'keygen'  => true,
+    'link'    => true,
+    'meta'    => true,
+    'param'   => true,
+    'source'  => true,
+    'track'   => true,
+    'wbr'     => true,
+  );
+
+  if ($content === null && empty($self_closing_tags[$tag])) {
+    $content = '';
+  }
+
   foreach ($attributes as $k => $v) {
     if ($v === null) {
       continue;
@@ -50,11 +75,8 @@ function phutil_tag($tag, array $attributes = array(), $content = null) {
     return new PhutilSafeHTML('<'.$tag.$attributes.' />');
   }
 
-  if (is_array($content)) {
-    $content = implode('', array_map('phutil_escape_html', $content));
-  } else {
-    $content = phutil_escape_html($content);
-  }
+  $content = phutil_escape_html($content);
+
   return new PhutilSafeHTML('<'.$tag.$attributes.'>'.$content.'</'.$tag.'>');
 }
 
@@ -64,7 +86,30 @@ function phutil_tag($tag, array $attributes = array(), $content = null) {
 function phutil_escape_html($string) {
   if ($string instanceof PhutilSafeHTML) {
     return $string;
+  } else if ($string instanceof PhutilSafeHTMLProducerInterface) {
+    $result = $string->producePhutilSafeHTML();
+    if ($result instanceof PhutilSafeHTML) {
+      return phutil_escape_html($result);
+    } else if (is_array($result)) {
+      return phutil_escape_html($result);
+    } else if ($result instanceof PhutilSafeHTMLProducerInterface) {
+      return phutil_escape_html($result);
+    } else {
+      try {
+        assert_stringlike($result);
+        return phutil_escape_html((string)$result);
+      } catch (Exception $ex) {
+        $class = get_class($string);
+        throw new Exception(
+          "Object (of class '{$class}') implements ".
+          "PhutilSafeHTMLProducerInterface but did not return anything ".
+          "renderable from producePhutilSafeHTML().");
+      }
+    }
+  } else if (is_array($string)) {
+    return implode('', array_map('phutil_escape_html', $string));
   }
+
   return htmlspecialchars($string, ENT_QUOTES, 'UTF-8');
 }
 
@@ -72,7 +117,7 @@ function phutil_escape_html($string) {
  * @group markup
  */
 function phutil_escape_html_newlines($string) {
-  return phutil_safe_html(nl2br(phutil_escape_html($string)));
+  return PhutilSafeHTML::applyFunction('nl2br', $string);
 }
 
 /**

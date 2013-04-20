@@ -65,14 +65,19 @@ final class ArcanistPhutilXHPASTLinter extends ArcanistBaseXHPASTLinter {
   }
 
   public function getCacheVersion() {
-    return 2;
+    $version = '2';
+    $path = xhpast_get_binary_path();
+    if (Filesystem::pathExists($path)) {
+      $version .= '-'.md5_file($path);
+    }
+    return $version;
   }
 
-  public function willLintPaths(array $paths) {
-    $this->xhpastLinter->willLintPaths($paths);
+  protected function buildFutures(array $paths) {
+    return $this->xhpastLinter->buildFutures($paths);
   }
 
-  public function lintPath($path) {
+  protected function resolveFuture($path, Future $future) {
     $tree = $this->xhpastLinter->getXHPASTTreeForPath($path);
     if (!$tree) {
       return;
@@ -80,9 +85,20 @@ final class ArcanistPhutilXHPASTLinter extends ArcanistBaseXHPASTLinter {
 
     $root = $tree->getRootNode();
 
-    $this->lintArrayCombine($root);
-    $this->lintUnsafeDynamicString($root);
-    $this->lintDeprecatedFunctions($root);
+    $method_codes = array(
+      'lintArrayCombine' => self::LINT_ARRAY_COMBINE,
+      'lintUnsafeDynamicString' => self::LINT_UNSAFE_DYNAMIC_STRING,
+      'lintDeprecatedFunctions' => self::LINT_DEPRECATED_FUNCTION,
+    );
+
+    foreach ($method_codes as $method => $codes) {
+      foreach ((array)$codes as $code) {
+        if ($this->isCodeEnabled($code)) {
+          call_user_func(array($this, $method), $root);
+          break;
+        }
+      }
+    }
   }
 
 
@@ -91,6 +107,9 @@ final class ArcanistPhutilXHPASTLinter extends ArcanistBaseXHPASTLinter {
       'pht' => 0,
 
       'hsprintf' => 0,
+      'jsprintf' => 0,
+
+      'hgsprintf' => 0,
 
       'csprintf' => 0,
       'vcsprintf' => 0,

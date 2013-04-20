@@ -21,9 +21,12 @@ final class PhutilSimpleOptionsTestCase extends PhutilTestCase {
       'flag'  => array('flag' => true),
       'legs=4,flag' => array('legs' => '4', 'flag' => true),
 
-      // Spaces should be ignored.
+      // Leading and trailing spaces should be ignored.
       '  flag  ' => array('flag' => true),
       '  legs =  4   , eyes  = 2' => array('legs' => '4', 'eyes' => '2'),
+
+      // Unescaped spaces inside values are OK.
+      'legs=a b   c d' => array('legs' => 'a b   c d'),
 
       // Case should be ignored.
       'LEGS=4' => array('legs' => '4'),
@@ -33,8 +36,20 @@ final class PhutilSimpleOptionsTestCase extends PhutilTestCase {
       'legs=' => array(),
       'legs=4,legs=,eyes=2' => array('eyes' => '2'),
 
+      // Quoted values should allow parsing comma, equals, etc.
+      'punctuation=",="' => array('punctuation' => ',='),
+
+      // Quoted keys can also have that stuff.
+      '"backslash\\\\quote\\""=1' => array('backslash\\quote"' => '1'),
+      ' "," = "," , "=" = "=" ' => array(',' => ',', '=' => '='),
+
       // Strings like this should not parse as simpleoptions.
       'SELECT id, name, size FROM table' => array(),
+      '"a""b"' => array(),
+      '=a' => array(),
+      ',a' => array(),
+      'a==' => array(),
+      'a=b=' => array(),
     );
 
     foreach ($map as $string => $expect) {
@@ -73,6 +88,7 @@ final class PhutilSimpleOptionsTestCase extends PhutilTestCase {
       'eyes=2, legs=4' => array('eyes' => '2', 'legs' => '4'),
       'legs=4, head' => array('legs' => '4', 'head' => true),
       'eyes=2' => array('legs' => '', 'eyes' => '2'),
+      '"thousands separator"=","' => array('thousands separator' => ','),
     );
 
     foreach ($map as $expect => $dict) {
@@ -84,10 +100,8 @@ final class PhutilSimpleOptionsTestCase extends PhutilTestCase {
     }
 
     $bogus = array(
-      array('LEGS' => true),
-      array('LEGS' => 4),
-      array('!' => '!'),
-      array('' => '2'),
+      array('' => ''),
+      array('' => 'x'),
     );
 
     foreach ($bogus as $bad_input) {
@@ -103,6 +117,12 @@ final class PhutilSimpleOptionsTestCase extends PhutilTestCase {
         $caught instanceof Exception,
         "Correct throw on unparse of bad input.");
     }
+
+    $parser = new PhutilSimpleOptions();
+    $this->assertEqual(
+      'a="\\}"',
+      $parser->unparse(array('a' => '}'), '}'),
+      "Unparse with extra escape.");
   }
 
 }

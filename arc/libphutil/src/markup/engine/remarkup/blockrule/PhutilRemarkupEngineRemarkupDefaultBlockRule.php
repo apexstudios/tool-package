@@ -15,15 +15,21 @@ final class PhutilRemarkupEngineRemarkupDefaultBlockRule
   }
 
   public function markupText($text) {
+    $text = trim($text);
     $text = $this->applyRules($text);
 
-    $lines = explode("\n", trim($text));
+    if ($this->getEngine()->isTextMode()) {
+      if (!$this->getEngine()->getConfig('preserve-linebreaks')) {
+        $text = preg_replace('/ *\n */', ' ', $text);
+      }
+      return $text;
+    }
 
-    $implode_on = $this->getEngine()->getConfig('preserve-linebreaks')
-      ? '<br />'
-      : '';
+    if ($this->getEngine()->getConfig('preserve-linebreaks')) {
+      $text = phutil_escape_html_newlines($text);
+    }
 
-    return '<p>'.trim(implode($implode_on."\n", $lines)).'</p>';
+    return phutil_tag('p', array(), $text);
   }
 
 }

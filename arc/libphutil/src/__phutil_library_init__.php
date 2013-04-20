@@ -26,23 +26,6 @@ function phutil_load_library($path) {
 /**
  * @group library
  */
-function phutil_is_windows() {
-  // We can also use PHP_OS, but that's kind of sketchy because it returns
-  // "WINNT" for Windows 7 and "Darwin" for Mac OS X. Practically, testing for
-  // DIRECTORY_SEPARATOR is more straightforward.
-  return (DIRECTORY_SEPARATOR != '/');
-}
-
-/**
- * @group library
- */
-function phutil_is_hiphop_runtime() {
-  return (array_key_exists('HPHP', $_ENV) && $_ENV['HPHP'] === 1);
-}
-
-/**
- * @group library
- */
 final class PhutilBootloader {
 
   private static $instance;
@@ -104,11 +87,34 @@ final class PhutilBootloader {
 
     try {
       $loader->selectAndLoadSymbols();
+    } catch (PhutilBootloaderException $ex) {
+      // Ignore this, it happens if a global function's file is removed or
+      // similar. Worst case is that we fatal when calling the function, which
+      // is no worse than fataling here.
     } catch (PhutilMissingSymbolException $ex) {
       // Ignore this, it happens if a global function is removed. Everything
       // else loaded so proceed forward: worst case is a fatal when we
       // hit a function call to a function which no longer exists, which is
       // no worse than fataling here.
+    }
+
+    if (empty($_SERVER['PHUTIL_DISABLE_RUNTIME_EXTENSIONS'])) {
+      $extdir = $path.DIRECTORY_SEPARATOR.'extensions';
+      if (Filesystem::pathExists($extdir)) {
+        $extensions = id(new FileFinder($extdir))
+          ->withSuffix('php')
+          ->withType('f')
+          ->withFollowSymlinks(true)
+          ->setForceMode('php')
+          ->find();
+
+        foreach ($extensions as $extension) {
+          $this->loadExtension(
+            $name,
+            $path,
+            $extdir.DIRECTORY_SEPARATOR.$extension);
+        }
+      }
     }
 
     return $this;
@@ -200,6 +206,62 @@ final class PhutilBootloader {
     error_reporting($old);
 
     return $okay;
+  }
+
+  private function loadExtension($library, $root, $path) {
+
+    $old_functions = get_defined_functions();
+    $old_functions = array_fill_keys($old_functions['user'], true);
+    $old_classes = array_fill_keys(get_declared_classes(), true);
+    $old_interfaces = array_fill_keys(get_declared_interfaces(), true);
+
+    $ok = $this->executeInclude($path);
+    if (!$ok) {
+      throw new PhutilBootloaderException(
+        "Include of extension file '{$path}' failed!");
+    }
+
+    $new_functions = get_defined_functions();
+    $new_functions = array_fill_keys($new_functions['user'], true);
+    $new_classes = array_fill_keys(get_declared_classes(), true);
+    $new_interfaces = array_fill_keys(get_declared_interfaces(), true);
+
+    $add_functions = array_diff_key($new_functions, $old_functions);
+    $add_classes = array_diff_key($new_classes, $old_classes);
+    $add_interfaces = array_diff_key($new_interfaces, $old_interfaces);
+
+    // NOTE: We can't trust the path we loaded to be the location of these
+    // symbols, because it might have loaded other paths.
+
+    foreach ($add_functions as $func => $ignored) {
+      $rfunc = new ReflectionFunction($func);
+      $fpath = Filesystem::resolvePath($rfunc->getFileName(), $root);
+      $this->libraryMaps[$library]['function'][$func] = $fpath;
+    }
+
+    foreach ($add_classes + $add_interfaces as $class => $ignored) {
+      $rclass = new ReflectionClass($class);
+      $cpath = Filesystem::resolvePath($rclass->getFileName(), $root);
+      $this->libraryMaps[$library]['class'][$class] = $cpath;
+
+      $xmap = $rclass->getInterfaceNames();
+      $parent = $rclass->getParentClass();
+      if ($parent) {
+        $xmap[] = $parent->getName();
+      }
+
+      if ($xmap) {
+        foreach ($xmap as $parent_class) {
+          $this->classTree[$parent_class][] = $class;
+        }
+
+        if (count($xmap) == 1) {
+          $xmap = head($xmap);
+        }
+
+        $this->libraryMaps[$library]['xmap'][$class] = $xmap;
+      }
+    }
   }
 
 }
@@ -307,7 +369,11 @@ function __phutil_autoload($class_name) {
       ->setName($class_name)
       ->selectAndLoadSymbols();
     if (!$symbols) {
-      throw new PhutilMissingSymbolException($class_name);
+      throw new PhutilMissingSymbolException(
+        $class_name,
+        'class or interface',
+        "the class or interface '{$class_name}' is not defined in the library ".
+        "map for any loaded phutil library.");
     }
   } catch (PhutilMissingSymbolException $ex) {
     // If there are other SPL autoloaders installed, we need to give them a

@@ -60,6 +60,8 @@ abstract class ArcanistBaseWorkflow extends Phobject {
   private $passedArguments;
   private $command;
 
+  private $stashed;
+
   private $projectInfo;
 
   private $arcanistConfiguration;
@@ -76,6 +78,14 @@ abstract class ArcanistBaseWorkflow extends Phobject {
 
 
   abstract public function run();
+
+  /**
+   * Finalizes any cleanup operations that need to occur regardless of
+   * whether the command succeeded or failed.
+   */
+  public function finalize() {
+    $this->finalizeWorkingCopy();
+  }
 
   /**
    * Return the command used to invoke this workflow from the command like,
@@ -636,8 +646,20 @@ abstract class ArcanistBaseWorkflow extends Phobject {
       } else if (!strncmp($arg, '--', 2)) {
         $arg_key = substr($arg, 2);
         if (!array_key_exists($arg_key, $spec)) {
-          throw new ArcanistUsageException(
-            "Unknown argument '{$arg_key}'. Try 'arc help'.");
+          $corrected = ArcanistConfiguration::correctArgumentSpelling(
+            $arg_key,
+            array_keys($spec));
+          if (count($corrected) == 1) {
+            PhutilConsole::getConsole()->writeErr(
+              pht(
+                "(Assuming '%s' is the British spelling of '%s'.)",
+                '--'.$arg_key,
+                '--'.head($corrected))."\n");
+            $arg_key = head($corrected);
+          } else {
+            throw new ArcanistUsageException(
+              "Unknown argument '{$arg_key}'. Try 'arc help'.");
+          }
         }
       } else if (!strncmp($arg, '-', 1)) {
         $arg_key = substr($arg, 1);
@@ -749,6 +771,14 @@ abstract class ArcanistBaseWorkflow extends Phobject {
     return $this;
   }
 
+  public function finalizeWorkingCopy() {
+    if ($this->stashed) {
+      $api = $this->getRepositoryAPI();
+      $api->unstashChanges();
+      echo "Restored stashed changes to the working directory.\n";
+    }
+  }
+
   public function requireCleanWorkingCopy() {
     $api = $this->getRepositoryAPI();
 
@@ -826,8 +856,18 @@ abstract class ArcanistBaseWorkflow extends Phobject {
         $api->addToCommit($unstaged);
         $must_commit += array_flip($unstaged);
       } else {
-        throw new ArcanistUsageException(
-          "Stage and commit (or revert) them before proceeding.");
+        $permit_autostash = $this->getWorkingCopy()->getConfigFromAnySource(
+          'arc.autostash',
+          false);
+        if ($permit_autostash && $api->canStashChanges()) {
+          echo "Stashing uncommitted changes. (You can restore them with ".
+               "`git stash pop`.)\n";
+          $api->stashChanges();
+          $this->stashed = true;
+        } else {
+          throw new ArcanistUsageException(
+            "Stage and commit (or revert) them before proceeding.");
+        }
       }
     }
 
@@ -871,15 +911,20 @@ abstract class ArcanistBaseWorkflow extends Phobject {
     if (!$commits) {
       return false;
     }
-    $commit = reset($commits);
 
+    $commit = reset($commits);
     $message = ArcanistDifferentialCommitMessage::newFromRawCorpus(
       $commit['message']);
+
     if ($message->getGitSVNBaseRevision()) {
       return false;
     }
 
     if ($api->getAuthor() != $commit['author']) {
+      return false;
+    }
+
+    if ($message->getRevisionID() && $this->getArgument('create')) {
       return false;
     }
 
@@ -1020,7 +1065,7 @@ abstract class ArcanistBaseWorkflow extends Phobject {
       // operation, so special case it.
       if (empty($this->changeCache[$path])) {
         $diff = $repository_api->getRawDiffText($path);
-        $parser = new ArcanistDiffParser();
+        $parser = $this->newDiffParser();
         $changes = $parser->parseDiff($diff);
         if (count($changes) != 1) {
           throw new Exception("Expected exactly one change.");
@@ -1120,11 +1165,9 @@ abstract class ArcanistBaseWorkflow extends Phobject {
 
   public static function getSystemArcConfigLocation() {
     if (phutil_is_windows()) {
-      // this is a horrible place to put this, but there doesn't seem to be a
-      // non-horrible place on Windows
       return Filesystem::resolvePath(
         'Phabricator/Arcanist/config',
-        getenv('PROGRAMFILES'));
+        getenv('ProgramData'));
     } else {
       return '/etc/arcconfig';
     }

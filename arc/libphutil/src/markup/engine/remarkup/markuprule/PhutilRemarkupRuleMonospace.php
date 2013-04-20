@@ -19,10 +19,14 @@ final class PhutilRemarkupRuleMonospace
       $text);
   }
 
-  private function markupMonospacedText($matches) {
-    $match = isset($matches[2]) ? $matches[2] : $matches[1];
+  protected function markupMonospacedText($matches) {
+    if ($this->getEngine()->isTextMode()) {
+      $result = $matches[0];
 
-    $result = '<tt>'.phutil_escape_html($match).'</tt>';
+    } else {
+      $match = isset($matches[2]) ? $matches[2] : $matches[1];
+      $result = phutil_tag('tt', array(), $match);
+    }
 
     return $this->getEngine()->storeText($result);
   }

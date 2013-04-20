@@ -7,10 +7,18 @@ final class PhutilRemarkupRuleDel
   extends PhutilRemarkupRule {
 
   public function apply($text) {
-    return preg_replace(
+    if ($this->getEngine()->isTextMode()) {
+      return $text;
+    }
+
+    return $this->replaceHTML(
       '@(?<!~)~~([^\s~].*?~*)~~@s',
-      '<del>\1</del>',
+      array($this, 'applyCallback'),
       $text);
+  }
+
+  protected function applyCallback($matches) {
+    return hsprintf('<del>%s</del>', $matches[1]);
   }
 
 }

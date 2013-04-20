@@ -19,7 +19,7 @@ final class PhutilRemarkupEngineRemarkupHeaderBlockRule
   public function markupText($text) {
     $text = trim($text);
 
-    $level = 1;
+    $level = 0;
     for ($ii = 0; $ii < min(5, strlen($text)); $ii++) {
       if ($text[$ii] == '=') {
         ++$level;
@@ -30,16 +30,27 @@ final class PhutilRemarkupEngineRemarkupHeaderBlockRule
     $text = trim($text, ' =');
 
     $engine = $this->getEngine();
+
+    if ($engine->isTextMode()) {
+      return
+        str_repeat('=', $level).' '.
+        $this->applyRules($text).
+        ' '.str_repeat('=', $level);
+    }
+
     $use_anchors = $engine->getConfig('header.generate-toc');
 
     $anchor = null;
     if ($use_anchors) {
-      $anchor = $this->generateAnchor($level - 1, $text);
+      $anchor = $this->generateAnchor($level, $text);
     }
 
-    $text = '<h'.$level.'>'.$anchor.$this->applyRules($text).'</h'.$level.'>';
+    $text = phutil_tag(
+      'h'.($level + 1),
+      array(),
+      array($anchor, $this->applyRules($text)));
 
-    return $engine->storeText($text);
+    return $text;
   }
 
   private function generateAnchor($level, $text) {
@@ -78,7 +89,7 @@ final class PhutilRemarkupEngineRemarkupHeaderBlockRule
 
     $engine->setTextMetadata($key, $anchors);
 
-    return phutil_render_tag(
+    return phutil_tag(
       'a',
       array(
         'name' => $anchor,
@@ -103,18 +114,18 @@ final class PhutilRemarkupEngineRemarkupHeaderBlockRule
       list($level, $name) = $info;
 
       while ($depth < $level) {
-        $toc[] = '<ul>';
+        $toc[] = hsprintf('<ul>');
         $depth++;
       }
       while ($depth > $level) {
-        $toc[] = '</ul>';
+        $toc[] = hsprintf('</ul>');
         $depth--;
       }
 
-      $toc[] = phutil_render_tag(
+      $toc[] = phutil_tag(
         'li',
         array(),
-        phutil_render_tag(
+        phutil_tag(
           'a',
           array(
             'href' => '#'.$anchor,
@@ -122,11 +133,11 @@ final class PhutilRemarkupEngineRemarkupHeaderBlockRule
           $name));
     }
     while ($depth > 0) {
-      $toc[] = '</ul>';
+      $toc[] = hsprintf('</ul>');
       $depth--;
     }
 
-    return implode("\n", $toc);
+    return phutil_implode_html("\n", $toc);
   }
 
 }

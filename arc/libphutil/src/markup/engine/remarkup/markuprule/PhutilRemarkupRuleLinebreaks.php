@@ -7,10 +7,11 @@ final class PhutilRemarkupRuleLinebreaks
   extends PhutilRemarkupRule {
 
   public function apply($text) {
-    return str_replace(
-      "\n",
-      "<br />\n",
-      $text);
+    if ($this->getEngine()->isTextMode()) {
+      return $text;
+    }
+
+    return phutil_escape_html_newlines($text);
   }
 
 }

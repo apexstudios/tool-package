@@ -561,6 +561,37 @@ function assert_instances_of(array $arr, $class) {
   return $arr;
 }
 
+/**
+ * Assert that passed data can be converted to string.
+ *
+ * @param  string    Assert that this data is valid.
+ * @return void
+ *
+ * @task   assert
+ */
+function assert_stringlike($parameter) {
+  switch (gettype($parameter)) {
+    case 'string':
+    case 'NULL':
+    case 'boolean':
+    case 'double':
+    case 'integer':
+      return;
+    case 'object':
+      if (method_exists($parameter, '__toString')) {
+        return;
+      }
+      break;
+    case 'array':
+    case 'resource':
+    case 'unknown type':
+    default:
+      break;
+  }
+
+  throw new InvalidArgumentException(
+    "Argument must be scalar or object which implements __toString()!");
+}
 
 /**
  * Returns the first argument which is not strictly null, or ##null## if there
@@ -756,6 +787,10 @@ function phutil_split_lines($corpus, $retain_endings = true) {
     array_pop($lines);
   }
 
+  if ($corpus instanceof PhutilSafeHTML) {
+    return array_map('phutil_safe_html', $lines);
+  }
+
   return $lines;
 }
 
@@ -814,4 +849,21 @@ function array_interleave($interleave, array $array) {
   }
   array_pop($result);
   return $result;
+}
+
+/**
+ * @group library
+ */
+function phutil_is_windows() {
+  // We can also use PHP_OS, but that's kind of sketchy because it returns
+  // "WINNT" for Windows 7 and "Darwin" for Mac OS X. Practically, testing for
+  // DIRECTORY_SEPARATOR is more straightforward.
+  return (DIRECTORY_SEPARATOR != '/');
+}
+
+/**
+ * @group library
+ */
+function phutil_is_hiphop_runtime() {
+  return (array_key_exists('HPHP', $_ENV) && $_ENV['HPHP'] === 1);
 }

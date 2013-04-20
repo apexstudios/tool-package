@@ -27,6 +27,7 @@ abstract class PhutilRemarkupEngineBlockRule {
 
   final public function setEngine(PhutilRemarkupEngine $engine) {
     $this->engine = $engine;
+    $this->updateRules();
     return $this;
   }
 
@@ -37,30 +38,84 @@ abstract class PhutilRemarkupEngineBlockRule {
   public function setMarkupRules(array $rules) {
     assert_instances_of($rules, 'PhutilRemarkupRule');
     $this->rules = $rules;
+    $this->updateRules();
     return $this;
   }
 
-  final private function getMarkupRules() {
+  private function updateRules() {
+    $engine = $this->getEngine();
+    if ($engine) {
+      foreach ($this->rules as $rule) {
+        $rule->setEngine($engine);
+      }
+    }
+    return $this;
+  }
+
+  final public function getMarkupRules() {
     return $this->rules;
   }
 
   final public function postprocess() {
-    $engine = $this->getEngine();
     $this->didMarkupText();
-    foreach ($this->getMarkupRules() as $rule) {
-      $rule->setEngine($engine);
-      $rule->didMarkupText();
-    }
   }
 
   final protected function applyRules($text) {
-    $engine = $this->getEngine();
     foreach ($this->getMarkupRules() as $rule) {
-      $rule->setEngine($engine);
       $text = $rule->apply($text);
     }
     return $text;
   }
 
+  protected function renderRemarkupTable(array $out_rows) {
+    assert_instances_of($out_rows, 'array');
+
+    if ($this->getEngine()->isTextMode()) {
+      $lengths = array();
+      foreach ($out_rows as $r => $row) {
+        foreach ($row['content'] as $c => $cell) {
+          $text = $this->getEngine()->restoreText($cell['content']);
+          $lengths[$c][$r] = phutil_utf8_strlen($text);
+        }
+      }
+      $max_lengths = array_map('max', $lengths);
+
+      $out = array();
+      foreach ($out_rows as $r => $row) {
+        $headings = false;
+        foreach ($row['content'] as $c => $cell) {
+          $length = $max_lengths[$c] - $lengths[$c][$r];
+          $out[] = '| '.$cell['content'].str_repeat(' ', $length).' ';
+          if ($cell['type'] == 'th') {
+            $headings = true;
+          }
+        }
+        $out[] = "|\n";
+
+        if ($headings) {
+          foreach ($row['content'] as $c => $cell) {
+            $char = ($cell['type'] == 'th' ? '-' : ' ');
+            $out[] = '| '.str_repeat($char, $max_lengths[$c]).' ';
+          }
+          $out[] = "|\n";
+        }
+      }
+
+      return rtrim(implode('', $out), "\n");
+    }
+
+    $out = array();
+    $out[] = "\n";
+    foreach ($out_rows as $row) {
+      $cells = array();
+      foreach ($row['content'] as $cell) {
+        $cells[] = phutil_tag($cell['type'], array(), $cell['content']);
+      }
+      $out[] = phutil_tag($row['type'], array(), $cells);
+      $out[] = "\n";
+    }
+
+    return phutil_tag('table', array('class' => 'remarkup-table'), $out);
+  }
 
 }

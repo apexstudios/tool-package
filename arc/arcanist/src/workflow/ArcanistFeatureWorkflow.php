@@ -25,18 +25,16 @@ EOTEXT
   public function getCommandHelp() {
     return phutil_console_format(<<<EOTEXT
           Supports: git, hg
-          A wrapper on 'git branch' or 'hg bookmark'. It pulls data from
-          Differential and displays the revision status next to the branch name.
+          A wrapper on 'git branch' or 'hg bookmark'.
 
-          By default, branches are sorted chronologically. You can sort them
-          by status instead with __--by-status__.
-
-          By default, branches that are "Closed" or "Abandoned" are not
-          displayed. You can show them with __--view-all__.
+          Without __name__, it lists the available branches and their revision
+          status.
 
           With __name__, it creates or checks out a branch. If the branch
           __name__ doesn't exist and is in format D123 then the branch of
-          revision D123 is checked out.
+          revision D123 is checked out. Use __start__ to specify where the new
+          branch will start. Use 'arc.feature.start.default' to set the default
+          feature start location.
 EOTEXT
       );
   }
@@ -50,7 +48,7 @@ EOTEXT
   }
 
   public function requiresAuthentication() {
-    return true;
+    return !$this->getArgument('names');
   }
 
 
@@ -105,13 +103,26 @@ EOTEXT
       $command = 'checkout %s';
     }
 
-    list($err, $stdout, $stderr) = $api->execManualLocal(
-      $command,
-      reset($names));
+    $err = 1;
+
+    $name = $names[0];
+    if (isset($names[1])) {
+      $start = $names[1];
+    } else {
+      $start = $this->getWorkingCopy()->getConfigFromAnySource(
+        'arc.feature.start.default');
+    }
+
+    $branches = $api->getAllBranches();
+    if (in_array($name, ipull($branches, 'name'))) {
+      list($err, $stdout, $stderr) = $api->execManualLocal(
+        $command,
+        $name);
+    }
 
     if ($err) {
       $match = null;
-      if (preg_match('/^D(\d+)$/', reset($names), $match)) {
+      if (preg_match('/^D(\d+)$/', $name, $match)) {
         try {
           $diff = $this->getConduit()->callMethodSynchronous(
             'differential.getdiff',
@@ -120,10 +131,10 @@ EOTEXT
             ));
 
           if ($diff['branch'] != '') {
-            $names[0] = $diff['branch'];
+            $name = $diff['branch'];
             list($err, $stdout, $stderr) = $api->execManualLocal(
               $command,
-              reset($names));
+              $name);
           }
         } catch (ConduitException $ex) {
         }
@@ -133,18 +144,24 @@ EOTEXT
     if ($err) {
       if ($api instanceof ArcanistMercurialAPI) {
         $rev = '';
-        if (isset($names[1])) {
-          $rev = csprintf('-r %s', hgsprintf($names[1]));
+        if ($start) {
+          $rev = csprintf('-r %s', $start);
         }
-        $exec = $api->execManualLocal(
-          'update %C %s',
-          $rev,
-          $names[0]);
 
-      } else {
         $exec = $api->execManualLocal(
-          'checkout -b %Ls',
-          $names);
+          'bookmark %C %s',
+          $rev,
+          $name);
+
+        if (!$exec[0] && $start) {
+          $api->execxLocal('update %s', $name);
+        }
+      } else {
+        $startarg = $start ? csprintf('%s', $start) : '';
+        $exec = $api->execManualLocal(
+          'checkout --track -b %s %C',
+          $name,
+          $startarg);
       }
 
       list($err, $stdout, $stderr) = $exec;

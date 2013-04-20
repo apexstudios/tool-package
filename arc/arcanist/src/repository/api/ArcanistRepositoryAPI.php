@@ -296,6 +296,33 @@ abstract class ArcanistRepositoryAPI {
     }
   }
 
+  /**
+   * Fetches the original file data for each path provided.
+   *
+   * @return map<string, string> Map from path to file data.
+   */
+  public function getBulkOriginalFileData($paths) {
+    $filedata = array();
+    foreach ($paths as $path) {
+      $filedata[$path] = $this->getOriginalFileData($path);
+    }
+
+    return $filedata;
+  }
+
+  /**
+   * Fetches the current file data for each path provided.
+   *
+   * @return map<string, string> Map from path to file data.
+   */
+  public function getBulkCurrentFileData($paths) {
+    $filedata = array();
+    foreach ($paths as $path) {
+      $filedata[$path] = $this->getCurrentFileData($path);
+    }
+
+    return $filedata;
+  }
 
   /**
    * @return Traversable
@@ -343,7 +370,7 @@ abstract class ArcanistRepositoryAPI {
     throw new ArcanistCapabilityNotSupportedException($this);
   }
 
-  public function amendCommit($message) {
+  public function amendCommit($message = null) {
     throw new ArcanistCapabilityNotSupportedException($this);
   }
 
@@ -395,6 +422,17 @@ abstract class ArcanistRepositoryAPI {
 
   abstract protected function buildLocalFuture(array $argv);
 
+  public function canStashChanges() {
+    return false;
+  }
+
+  public function stashChanges() {
+    throw new ArcanistCapabilityNotSupportedException($this);
+  }
+
+  public function unstashChanges() {
+    throw new ArcanistCapabilityNotSupportedException($this);
+  }
 
 /* -(  Scratch Files  )------------------------------------------------------ */
 
